@@ -1,16 +1,16 @@
 import UIKit
 
 public extension TopbarTheme {
-    static var simple: Self {
+    static var leaves: Self {
         TopbarTheme(
             background: TopbarTheme.Background(
                 default: TopbarTheme.Background.Default(
                     neutral: UIColor.rgba(light: 0x0D0D0DFF, dark: 0xFFFFFFFF),
                     neutralFade: UIColor.rgba(light: 0x09090914, dark: 0xFFFFFF14),
-                    primary: UIColor.rgba(light: 0x0C0D0EFF, dark: 0xFFFFFFCC),
+                    primary: UIColor.rgba(light: 0xFFFFFFCC, dark: 0xFFFFFFCC),
                     themed: UIColor.rgba(light: 0x416AFAFF, dark: 0x4A72FFFF),
                     topbarAndroid: UIColor.rgba(light: 0xFFFFFFFF, dark: 0x1E1F24FF),
-                    topbariOS: UIColor.rgba(light: 0xF6F6F6E0, dark: 0x1E1F24D6)
+                    topbariOS: UIColor.rgba(light: 0xF6F6F6D6, dark: 0x1E1F24D6)
                 ),
                 disabled: TopbarTheme.Background.Disabled(
                     neutral: UIColor.rgba(light: 0x0D0D0D7A, dark: 0xFFFFFF66),

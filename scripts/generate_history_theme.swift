@@ -14,7 +14,7 @@ let codeGenString = "CodeGen"
 let codeGenThemeTypeString = "\(codeGenString)ThemeType"
 
 let parseHistoryColorsScriptFilePath = "./scripts/parse_history_colors.swift"
-let codeGenInOMUIConstantsDirPath = "./GenerateColors/\(codeGenString)/Colors/UIColor+History/"
+let codeGenInOMUIConstantsDirPath = "./GenerateColors/Colors/\(codeGenString)/"
 let appearanceChatJSONFilePath = "./scripts/appearance.json"
 
 private func pascalCase(_ text: String) -> String {
@@ -324,12 +324,14 @@ func generateStructDeclarations(rootStructs: [StructNode]) throws {
         } else {
             fileContent = root.generateStructDeclaration()
         }
+        
+        let finalContent = "import UIKit\n\n\(fileContent)"
 
         let structDirURL = codeGenDirectoryURL.appending(path: root.name)
         try fileManager.createDirectory(at: structDirURL, withIntermediateDirectories: true, attributes: nil)
 
         let structFilePath = "\(structDirURL.path())/\(root.name).swift"
-        try fileContent.write(toFile: structFilePath, atomically: true, encoding: .utf8)
+        try finalContent.write(toFile: structFilePath, atomically: true, encoding: .utf8)
     }
 }
 
@@ -365,6 +367,8 @@ extension StructNode {
 
 func generateStructInitialization(for themeName: String, structNode: StructNode) -> String {
     return """
+    import UIKit
+    
     public extension \(structNode.name) {
         static var \(camelCase(themeName)): Self {
             \(structNode.generateStructInitialization(internalLevel: 3, path: []))
@@ -402,103 +406,6 @@ func generateCodeGenThemeType(rootStructNodesDict: [String: [StructNode]]) throw
     try fileContent.write(toFile: filePath, atomically: true, encoding: .utf8)
 }
 
-// MARK: - Theme Value (color/gradient) getters for OMHistoryThemeProvider
-
-extension StructNode {
-    func generateValueGetters(pathComponents: [String] = []) -> String {
-        let lastPathComponents: [String] = pathComponents.isEmpty
-        ? [camelCase("\(name)")]
-        : pathComponents + [name]
-
-        var result = ""
-
-        let sortedChildren = children.sorted { $0.key < $1.key }
-        for (_, child) in sortedChildren {
-            if let value = child.value {
-                let path = lastPathComponents + [child.name]
-                let propertiesName = camelCase(path.joined(separator: " "))
-                let getterName = path
-                    .map { $0.prefix(1).lowercased() + $0.dropFirst() }
-                    .joined(separator: ".")
-
-                result += """
-                
-                
-                    var \(propertiesName): \(value.typeString) {
-                        \(getterName)
-                    }
-                """
-            } else {
-                result += child.generateValueGetters(pathComponents: lastPathComponents)
-            }
-        }
-        return result
-    }
-
-    func generateValueGettersForBubbles(pathComponents: [String] = []) -> String {
-        var result = ""
-
-        let sortedChildren = children.sorted { $0.key < $1.key }
-        for (key, child) in sortedChildren {
-            if let value = child.value {
-                let path = pathComponents + [child.name]
-
-                let propertiesNamePath = [bubblesRootStructName] + path
-                let propertiesName = camelCase(propertiesNamePath.joined(separator: " "))
-
-                let bubbleColorsGetterName = path
-                    .map { $0.prefix(1).lowercased() + $0.dropFirst() }
-                    .joined(separator: ".")
-
-                result += """
-                
-                
-                    func \(propertiesName)(for myMessage: Bool) -> \(value.typeString) {
-                        (myMessage ? \(camelCase(bubblesRootStructName)).outgoing : \(camelCase(bubblesRootStructName)).incoming).\(bubbleColorsGetterName)
-                    }
-                """
-            } else {
-                result += child.generateValueGettersForBubbles(pathComponents: pathComponents + [key])
-            }
-        }
-        return result
-    }
-}
-
-func generateValueGettersForHistoryProvider(rootStructs: [StructNode]) throws {
-    var properties: [String] = []
-
-    let sortedRootStructs = rootStructs.sorted { $0.name < $1.name }
-    for root in sortedRootStructs {
-        if root.name != bubblesRootStructName {
-            properties.append(root.generateValueGetters())
-        } else {
-            guard let outgoingStruct = root.children["Outgoing"] else { continue }
-            properties.append(outgoingStruct.generateValueGettersForBubbles())
-        }
-    }
-
-    let fileContent = """
-    import OMUIConstants
-    
-    @objc public extension OMHistoryThemeProvider {
-    
-        // MARK: - Use for Swift
-    
-        @nonobjc func \(camelCase(bubblesRootStructName))(for myMessage: Bool) -> \(bubblesRootStructName).\(bubblesChildRootStuctName) {
-            myMessage ? \(camelCase(bubblesRootStructName)).outgoing : \(camelCase(bubblesRootStructName)).incoming
-        }
-    
-        // MARK: - Use for Objc-C\(properties.joined())
-    }
-    
-    """
-
-    let filePath = "\(codeGenInOMUIConstantsDirPath)/OMHistoryThemeProvider+Colors.swift"
-
-    try fileContent.write(toFile: filePath, atomically: true, encoding: .utf8)
-}
-
 // MARK: - Main
 
 func main() throws {
@@ -514,7 +421,6 @@ func main() throws {
     try generateStructDeclarations(rootStructs: rootStructs)
     try generateStructDefaultInitialization(rootStructNodesDict: rootStructNodesDict)
     try generateCodeGenThemeType(rootStructNodesDict: rootStructNodesDict)
-    try generateValueGettersForHistoryProvider(rootStructs: rootStructs)
 }
 
 do {
